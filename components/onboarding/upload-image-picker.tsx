@@ -14,7 +14,7 @@ import colors from "../ui/colors";
 export default function UploadImagePicker() {
   const { user } = useSupabase();
   const { data: profile } = {
-    data: { avatar: "https://example.com/avatar.jpg" },
+    data: { avatar: "https://avatars.githubusercontent.com/u/4723117?v=4" },
   };
 
   const [status, requestPermission] = ImagePicker.useMediaLibraryPermissions();
@@ -41,7 +41,7 @@ export default function UploadImagePicker() {
       }
 
       const { assets, canceled } = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.All,
+        mediaTypes: ["images"],
         allowsEditing: true,
         aspect: [4, 3],
         quality: 1,
@@ -50,33 +50,46 @@ export default function UploadImagePicker() {
       if (canceled) return;
 
       const result = assets[0];
+
+      // Check file size (limit to 5MB)
+      const fileInfo = await FileSystem.getInfoAsync(result.uri, {
+        size: true,
+      });
+      const fileSize = fileInfo.exists ? fileInfo.size || 0 : 0;
+      console.log("File size:", fileSize, "bytes");
+
+      if (fileSize > 5 * 1024 * 1024) {
+        throw new Error(
+          "File size too large. Please select an image under 5MB."
+        );
+      }
+
       const base64 = await FileSystem.readAsStringAsync(result.uri, {
         encoding: "base64",
       });
-      const mimeType = result.mimeType;
-      const fileExtension = mimeType?.split("/")[1];
-      const filePath = `avatars/${result.fileName}-${user?.id}.${fileExtension}`;
+
+      const mimeType = result.mimeType || "image/jpeg"; // Fallback MIME type
+      const fileExtension = mimeType.split("/")[1];
+      const filePath = `avatars/${Date.now()}-${user?.id}.${fileExtension}`;
+
+      const arrayBuffer = decode(base64);
 
       const { error } = await supabase.storage
         .from("images")
-        .upload(filePath, decode(base64), {
-          contentType: result.mimeType,
+        .upload(filePath, arrayBuffer, {
+          contentType: mimeType,
           upsert: true,
         });
 
       if (error) {
-        Alert.alert("Error", error.message);
-        return;
+        console.error("Supabase storage error:", error);
+        return Alert.alert(
+          "Upload Error",
+          `Failed to upload image: ${error.message}`
+        );
       }
-
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from("images").getPublicUrl(filePath);
-
-      // await updateProfileMutation.mutateAsync({
-      //   avatar: publicUrl,
-      // });
     } catch (e) {
+      console.error(e);
       if (e instanceof Error) {
         Alert.alert(
           "Error while uploading the file, please try again",
