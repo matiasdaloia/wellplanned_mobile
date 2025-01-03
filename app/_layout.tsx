@@ -1,39 +1,29 @@
-import FontAwesome from "@expo/vector-icons/FontAwesome";
-import {
-  DarkTheme,
-  DefaultTheme,
-  ThemeProvider,
-} from "@react-navigation/native";
 import { useFonts } from "expo-font";
-import { Stack } from "expo-router";
+import { Slot } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import "react-native-reanimated";
-
-import { useColorScheme } from "@/components/useColorScheme";
+import { StyleSheet } from "react-native";
 
 import "../global.css";
+import { SupabaseProvider } from "@/context/supabase-provider";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 
-export {
-  // Catch any errors thrown by the Layout component.
-  ErrorBoundary,
-} from "expo-router";
+export { ErrorBoundary } from "expo-router";
 
-export const unstable_settings = {
-  // Ensure that reloading on `/modal` keeps a back button present.
-  initialRouteName: "(tabs)",
-};
-
-// Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
-    SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
-    ...FontAwesome.font,
+    PlayfairRegular: require("../assets/fonts/heading/PlayfairDisplay-Regular.ttf"),
+    PlayfairBlack: require("../assets/fonts/heading/PlayfairDisplay-Black.ttf"),
+    PlayfairBold: require("../assets/fonts/heading/PlayfairDisplay-Bold.ttf"),
+    OpensansLight: require("../assets/fonts/body/OpenSansHebrew-Light.ttf"),
+    OpensansRegular: require("../assets/fonts/body/OpenSansHebrew-Regular.ttf"),
+    OpensansBold: require("../assets/fonts/body/OpenSansHebrew-Bold.ttf"),
   });
 
-  // Expo Router uses Error Boundaries to catch errors in the navigation tree.
   useEffect(() => {
     if (error) throw error;
   }, [error]);
@@ -52,15 +42,20 @@ export default function RootLayout() {
 }
 
 function RootLayoutNav() {
-  const colorScheme = useColorScheme();
-
   return (
-    <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: "modal" }} />
-      </Stack>
-    </ThemeProvider>
+    <GestureHandlerRootView style={styles.container}>
+      <BottomSheetModalProvider>
+        <SupabaseProvider>
+          <Slot />
+        </SupabaseProvider>
+      </BottomSheetModalProvider>
+    </GestureHandlerRootView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+});
 
