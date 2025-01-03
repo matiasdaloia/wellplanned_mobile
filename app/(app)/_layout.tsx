@@ -8,8 +8,8 @@ export const unstable_settings = {
 export default function Layout() {
   return (
     <Stack screenOptions={{ headerShown: false, gestureEnabled: false }}>
-      <Stack.Screen name="(protected)" options={{ headerShown: false }} />
       <Stack.Screen name="(auth)" />
+      <Stack.Screen name="(protected)" options={{ headerShown: false }} />
     </Stack>
   );
 }

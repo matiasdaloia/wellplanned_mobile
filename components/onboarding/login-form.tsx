@@ -5,101 +5,52 @@ import { useForm } from "react-hook-form";
 import { Alert, View } from "react-native";
 import * as z from "zod";
 
-import type { CodeFormType } from "./signup-form";
-import { codeSchema } from "./signup-form";
-import { supabase } from "@/lib/supabase";
 import { Text } from "../ui/components/text";
 import { ControlledInput } from "../ui/components/input";
 import { Button } from "../ui/components/button";
+import { useSupabase } from "@/context/supabase-provider";
 
-const schema = z.object({
-  email: z
-    .string({
-      required_error: "Email is required",
-    })
-    .email("Invalid email format"),
+const formSchema = z.object({
+  email: z.string().email("Please enter a valid email address."),
+  password: z
+    .string()
+    .min(8, "Please enter at least 8 characters.")
+    .max(64, "Please enter fewer than 64 characters."),
 });
 
-export type FormType = z.infer<typeof schema>;
+export type FormType = z.infer<typeof formSchema>;
 
 export const LoginForm = () => {
   const router = useRouter();
+  const { signInWithPassword } = useSupabase();
   const [loading, setLoading] = useState(false);
-  const [pendingVerification, setPendingVerification] = useState(false);
 
-  const { handleSubmit, control, getValues } = useForm<FormType>({
-    resolver: zodResolver(schema),
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
   });
-
-  const { handleSubmit: handleSubmitCode, control: codeFormControl } =
-    useForm<CodeFormType>({
-      resolver: zodResolver(codeSchema),
-    });
 
   const onSubmit = async ({ email }: FormType) => {
     setLoading(true);
 
-    const { data, error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        shouldCreateUser: false,
-      },
-    });
-
-    if (error) {
-      Alert.alert("Error", error.message);
-    } else if (data.user === null) {
-      Alert.alert("Check your email for the verification code to continue");
-      setPendingVerification(true);
-    }
-
-    setLoading(false);
-  };
-
-  const onVerify = async ({ code }: CodeFormType) => {
-    setLoading(true);
-    const {
-      data: { session },
-      error,
-    } = await supabase.auth.verifyOtp({
-      email: getValues().email,
-      token: code,
-      type: "email",
-    });
-
-    if (error) {
-      Alert.alert("Error", error.message);
-    } else if (session) {
+    try {
+      await signInWithPassword(email, form.getValues().password);
+      form.reset();
       router.push("/(app)/(protected)");
+    } catch (error) {
+      Alert.alert(
+        "Error",
+        error instanceof Error
+          ? error.message
+          : "An error occurred while signing in, please try again."
+      );
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
-
-  if (pendingVerification) {
-    return (
-      <View className="p-5">
-        <View className="gap-4">
-          <View className="items-center">
-            <Text className="text-3xl text-center font-bodyBold text-primary-dark">
-              Verification code
-            </Text>
-            <Text className="text-center text-gray-600">
-              Enter the 6-digit code sent to your email{" "}
-              <Text className="text-primary-main font-bodyBold">
-                {getValues().email}
-              </Text>
-            </Text>
-          </View>
-          <ControlledInput control={codeFormControl} label="Code" name="code" />
-          <Button
-            label="Verify"
-            loading={loading}
-            onPress={handleSubmitCode(onVerify)}
-          />
-        </View>
-      </View>
-    );
-  }
 
   return (
     <View className="p-5">
@@ -113,10 +64,16 @@ export const LoginForm = () => {
         </Text>
       </View>
       <View className="gap-4">
-        <ControlledInput control={control} label="Email" name="email" />
+        <ControlledInput control={form.control} label="Email" name="email" />
+        <ControlledInput
+          control={form.control}
+          label="Password"
+          name="password"
+          secureTextEntry
+        />
         <Text>
           No account?{" "}
-          <Link href="/(auth)/sign-up">
+          <Link href="/(app)/(auth)/sign-up">
             <Text className="text-primary-main font-bodyBold underline">
               Sign up
             </Text>
@@ -124,7 +81,7 @@ export const LoginForm = () => {
         </Text>
         <Button
           disabled={loading}
-          onPress={handleSubmit(onSubmit)}
+          onPress={form.handleSubmit(onSubmit)}
           label="Log In"
           loading={loading}
         />
