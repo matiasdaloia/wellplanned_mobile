@@ -1,109 +1,160 @@
 import MealRecommendations from "@/components/home/meal-recommendations";
+import RecommendationsPreview from "@/components/home/recommendations-preview";
 import BaseLayout from "@/components/layouts/base";
 import EmptyState from "@/components/ui/components/empty-state";
 import LoadingState from "@/components/ui/components/loading-state";
 import { Text } from "@/components/ui/components/text";
+import { slotNamesMap } from "@/lib/constants";
+import { mealPlanService } from "@/lib/mealplan-service";
+import { useQuery } from "@tanstack/react-query";
 import _ from "lodash";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { View } from "react-native";
 import { ScrollView } from "react-native-gesture-handler";
+import EventSource from "react-native-sse";
 
-export const slotNamesMap = {
-  0: "Breakfast",
-  1: "Mid Morning Snack",
-  2: "Lunch",
-  3: "Afternoon Snack",
-  4: "Dinner",
-};
+type StreamingMessage =
+  | {
+      type: "error";
+      content: string;
+    }
+  | {
+      type: "update" | "complete";
+      content: any[];
+    };
 
 export default function Page() {
-  // const {
-  //   isLoading,
-  //   data: recommendations,
-  //   error,
-  //   refetch,
-  // } = api.recommendation.findByUserId.useQuery();
+  const [status, setStatus] = useState<
+    "idle" | "streaming" | "complete" | "error"
+  >("idle");
+  const [error, setError] = useState<string | null>(null);
+  const [recommendations, setRecommendations] = useState<any[]>([]);
 
-  // TODO: Remove mock data
-  const isLoading = false;
-  const recommendations = [
-    {
-      id: "1",
-      slot: 0,
-      recipe: {
-        title: "Spaghetti Carbonara",
-        imageUrl: "https://source.unsplash.com/400x400/?pasta",
-        difficulty: "Easy",
-        servings: 4,
-      },
-    },
-    {
-      id: "2",
-      slot: 1,
-      recipe: {
-        title: "Spaghetti Carbonara",
-        imageUrl: "https://source.unsplash.com/400x400/?pasta",
-        difficulty: "Easy",
-        servings: 4,
-      },
-    },
-    {
-      id: "3",
-      slot: 2,
-      recipe: {
-        title: "Spaghetti Carbonara",
-        imageUrl: "https://source.unsplash.com/400x400/?pasta",
-        difficulty: "Easy",
-        servings: 4,
-      },
-    },
-    {
-      id: "4",
-      slot: 3,
-      recipe: {
-        title: "Spaghetti Carbonara",
-        imageUrl: "https://source.unsplash.com/400x400/?pasta",
-        difficulty: "Easy",
-        servings: 4,
-      },
-    },
-    {
-      id: "5",
-      slot: 4,
-      recipe: {
-        title: "Spaghetti Carbonara",
-        imageUrl: "https://source.unsplash.com/400x400/?pasta",
-        difficulty: "Easy",
-        servings: 4,
-      },
-    },
-  ];
-  const error = false;
-  const refetch = () => {};
+  // First fetch the current meal plan to get its ID
+  const { data: mealPlans, isLoading: isLoadingMealPlan } = useQuery({
+    queryKey: ["mealPlan"],
+    queryFn: () => mealPlanService.getCurrentUserMealPlan(),
+  });
+
+  // Then check for existing recommendations
+  const { data: existingRecommendations, isLoading: isLoadingRecommendations } =
+    useQuery({
+      queryKey: ["recommendations", mealPlans?.[0]?.id],
+      queryFn: () =>
+        mealPlanService.getMealPlanRecommendations(mealPlans[0].id),
+      enabled: !!mealPlans?.[0]?.id,
+    });
+
+  useEffect(() => {
+    if (existingRecommendations) {
+      setStatus("complete");
+      setRecommendations(existingRecommendations);
+      return;
+    }
+
+    if (!isLoadingMealPlan && !isLoadingRecommendations && mealPlans?.[0]?.id) {
+      const generateRecommendations = async () => {
+        const es =
+          await mealPlanService.createSSEConnectionForRecommendations();
+
+        if (!es) {
+          setStatus("error");
+          setError("Failed to start recommendations generation");
+          return;
+        }
+
+        es.addEventListener("message", (event) => {
+          if (event.data === "" || event.data === null) return;
+
+          try {
+            const data = JSON.parse(event.data) as StreamingMessage;
+
+            switch (data.type) {
+              case "update":
+                setStatus("streaming");
+                setRecommendations((prev) => [...prev, ...data.content]);
+                break;
+
+              case "complete":
+                setStatus("complete");
+                setRecommendations(data.content);
+                es.close();
+                break;
+
+              case "error":
+                setStatus("error");
+                setError(data.content);
+                es.close();
+                break;
+            }
+          } catch (err) {
+            setStatus("error");
+            setError("Failed to parse server response");
+            es.close();
+          }
+        });
+
+        es.addEventListener("error", (error) => {
+          setStatus("error");
+          setError("Connection failed");
+          es.close();
+        });
+      };
+
+      generateRecommendations();
+    }
+  }, [
+    mealPlans,
+    isLoadingMealPlan,
+    isLoadingRecommendations,
+    existingRecommendations,
+  ]);
 
   const groupedRecommendationsBySlot = _.groupBy(recommendations, "slot");
 
-  if (error) {
+  if (
+    isLoadingMealPlan ||
+    (isLoadingRecommendations && !existingRecommendations)
+  ) {
     return (
-      <BaseLayout headerTitle="Groceries">
+      <BaseLayout headerTitle="Recommendations">
+        <LoadingState
+          title="Getting ready..."
+          subtitle="We're checking for existing recommendations."
+        />
+      </BaseLayout>
+    );
+  }
+
+  if (status === "error") {
+    return (
+      <BaseLayout headerTitle="Recommendations">
         <EmptyState
           title="Something went wrong"
-          subtitle="We couldn't generate your grocery list."
+          subtitle={error || "Failed to load recommendations"}
           type="error"
-          onPressButton={refetch}
+          onPressButton={() => setStatus("idle")}
           buttonLabel="Try again"
         />
       </BaseLayout>
     );
   }
 
-  if (isLoading) {
+  if (status === "idle") {
     return (
       <BaseLayout headerTitle="Recommendations">
         <LoadingState
-          title="Loading your recommendations..."
-          subtitle="This may take a few seconds the first time."
+          title="Getting ready..."
+          subtitle="We're about to start generating your recommendations."
         />
+      </BaseLayout>
+    );
+  }
+
+  if (status === "streaming") {
+    return (
+      <BaseLayout headerTitle="Recommendations">
+        <RecommendationsPreview partialResults={recommendations} />
       </BaseLayout>
     );
   }
@@ -122,8 +173,7 @@ export default function Page() {
                 <Text className="text-gray-600">
                   Here are some recipes that you can try for{" "}
                   {slotNamesMap[Number(key) as keyof typeof slotNamesMap]}{" "}
-                  today. They are based on the ingredients that you have in your
-                  meal plan.
+                  today. They are based on your meal plan.
                 </Text>
               </View>
               <MealRecommendations

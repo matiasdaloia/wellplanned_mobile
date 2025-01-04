@@ -45,6 +45,15 @@ class MealPlanService {
     };
   }
 
+  async getSSEHeaders(): Promise<HeadersInit> {
+    const headers = await this.getHeaders();
+    return {
+      ...headers,
+      Accept: "text/event-stream",
+      "Content-Type": "application/json",
+    };
+  }
+
   async uploadPDF(file: FileUpload): Promise<UploadResponse> {
     const headers = await this.getHeaders();
 
@@ -110,6 +119,46 @@ class MealPlanService {
     }
 
     return response.json();
+  }
+
+  async getMealPlanRecommendations(mealPlanId: string) {
+    const headers = await this.getHeaders();
+    const response = await fetch(
+      `${API_URL}/mealplans/${mealPlanId}/recommendations`,
+      {
+        method: "GET",
+        headers,
+      }
+    );
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        return null;
+      }
+      throw new Error(
+        `Failed to fetch recommendations: ${response.statusText}`
+      );
+    }
+
+    return response.json();
+  }
+
+  async createSSEConnectionForRecommendations(): Promise<
+    EventSource | undefined
+  > {
+    const headers = await this.getSSEHeaders();
+    try {
+      const eventSource = new EventSource(
+        `${API_URL}/mealplans/generate/recommendations`,
+        {
+          method: "POST",
+          headers,
+        }
+      );
+      return eventSource;
+    } catch (error) {
+      console.error("Failed to create SSE connection:", error);
+    }
   }
 
   async uploadProfileImage(
