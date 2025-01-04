@@ -7,7 +7,7 @@ export default function SplashScreen() {
   return (
     <View className="flex-1 items-center justify-center bg-primary-extra-dark">
       <LottieView
-        source={require("../../../assets/animations/onboarding/jumping_avocado.json")}
+        source={require("../../assets/animations/onboarding/jumping_avocado.json")}
         style={{
           width: horizontalScale(180),
           height: verticalScale(180),

@@ -1,3 +1,4 @@
+import SplashScreen from "@/components/common/splashscreen";
 import BaseLayout from "@/components/layouts/base";
 import DayButton from "@/components/menu-overview/day-button";
 import colors from "@/components/ui/colors";
@@ -11,7 +12,6 @@ import { mealPlanService } from "@/lib/mealplan-service";
 import { horizontalScale } from "@/lib/metrics";
 import { useQuery } from "@tanstack/react-query";
 import dayjs from "dayjs";
-import { SplashScreen } from "expo-router";
 import { Clock } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import { View } from "react-native";
@@ -63,45 +63,16 @@ const slotCardConfig = {
 };
 
 export default function Page() {
-  // const { data: mealPlan, isLoading } = api.mealplan.findByUserId.useQuery()
   const [daySlot, setDaySlot] = useState(todaySlot);
   const [status, setStatus] = useState("idle");
   const [streamingContent, setStreamingContent] = useState<any>();
   const [finalResult, setFinalResult] = useState<any>();
   const [error, setError] = useState<string>();
 
-  // if (isLoading) {
-  //   return <SplashScreen />
-  // }
-
-  // const currentDayMealPlan = mealPlan?.results?.find(
-  //   (result) => result.weekday === daySlot
-  // );
-  // const sortedMeals = currentDayMealPlan?.meals.sort((a, b) => a.slot - b.slot);
-
-  // TODO: Remove mock data
-  const sortedMeals = [
-    {
-      slot: 0,
-      meal: "Oatmeal with fruits",
-    },
-    {
-      slot: 1,
-      meal: "Apple",
-    },
-    {
-      slot: 2,
-      meal: "Chicken Salad",
-    },
-    {
-      slot: 3,
-      meal: "Greek Yogurt",
-    },
-    {
-      slot: 4,
-      meal: "Spaghetti Carbonara",
-    },
-  ];
+  const { data: mealPlans, isLoading } = useQuery({
+    queryKey: ["mealPlan"],
+    queryFn: () => mealPlanService.getCurrentUserMealPlan(),
+  });
 
   const selectedDay = currentWeekDays.find((date) => date.getDay() === daySlot);
   const selectedDayFormatted = selectedDay?.toLocaleDateString(undefined, {
@@ -110,30 +81,8 @@ export default function Page() {
     day: "numeric",
   });
 
-  const { data: profile, isLoading: isLoadingProfile } = useQuery({
-    queryKey: ["profile"],
-    queryFn: () => mealPlanService.getUserProfile(),
-  });
-
-  const {
-    data: mealPlan,
-    isLoading: isLoadingMealPlan,
-    refetch,
-  } = useQuery({
-    queryKey: ["mealPlan"],
-    queryFn: () => mealPlanService.getCurrentUserMealPlan(),
-  });
-
   useEffect(() => {
-    if (isLoadingProfile) {
-      SplashScreen.preventAutoHideAsync();
-    } else {
-      SplashScreen.hideAsync();
-    }
-  }, [isLoadingProfile]);
-
-  useEffect(() => {
-    if (!mealPlan?.length) {
+    if (!isLoading && !mealPlans?.length) {
       mealPlanService.createSSEConnectionForMealplanGeneration().then((es) => {
         es?.addEventListener("message", (event) => {
           if (event.data === "" || event.data === null) return;
@@ -173,9 +122,19 @@ export default function Page() {
         });
       });
     }
-  }, [mealPlan]);
+  }, [mealPlans, isLoading]);
 
-  console.log({ streamingContent, finalResult, error });
+  console.log({ mealPlans });
+
+  if (isLoading) {
+    return <SplashScreen />;
+  }
+
+  const currentDayMealPlan = mealPlans?.[0].data.results.find(
+    (result) => result.weekday === daySlot
+  );
+
+  const sortedMeals = currentDayMealPlan?.meals.sort((a, b) => a.slot - b.slot);
 
   return (
     <BaseLayout headerTitle="Weekly Menu" noPadding>
