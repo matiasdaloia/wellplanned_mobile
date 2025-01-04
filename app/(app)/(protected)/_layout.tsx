@@ -1,7 +1,8 @@
+import SplashScreen from "@/components/common/splashscreen";
 import colors from "@/components/ui/colors";
 import { mealPlanService } from "@/lib/mealplan-service";
 import { useQuery } from "@tanstack/react-query";
-import { Tabs } from "expo-router";
+import { Redirect, Tabs } from "expo-router";
 import {
   Calendar,
   ChefHat,
@@ -10,37 +11,27 @@ import {
 } from "lucide-react-native";
 
 export default function Layout() {
-  // // TODO: Remove mock data
-  // if (mealPlan?.status === "processing") {
-  //   return (
-  //     <BaseLayout headerTitle="Weekly Menu">
-  //       <LoadingState
-  //         title="Generating your meal plan..."
-  //         subtitle="This may take a few seconds the first time."
-  //       />
-  //     </BaseLayout>
-  //   );
-  // }
+  const { data, isLoading } = useQuery({
+    queryKey: ["hasAlreadyUploadedPDF"],
+    queryFn: () => mealPlanService.hasAlreadyUploadedPDF(),
+  });
 
-  // if (!mealPlan) {
-  //   return <Redirect href="/(app)/(auth)/onboarding/upload" />;
-  // }
+  const { data: profile, isLoading: isLoadingProfile } = useQuery({
+    queryKey: ["profile"],
+    queryFn: () => mealPlanService.getUserProfile(),
+  });
 
-  // if (mealPlan?.status === "failed") {
-  //   return (
-  //     <EmptyState
-  //       title="Something went wrong"
-  //       subtitle="We couldn't generate your meal plan, please try again."
-  //       type="error"
-  //       onPressButton={() => generateMealPlanMutation.mutate()}
-  //       buttonLabel="Try again"
-  //     />
-  //   );
-  // }
+  if (isLoading || isLoadingProfile) {
+    return <SplashScreen />;
+  }
 
-  // if (mealPlan?.status === "processed" && !profile?.isOnboarded) {
-  //   return <Redirect href="/(auth)/onboarding/profile" />;
-  // }
+  if (!data?.exists) {
+    return <Redirect href="/(app)/(auth)/onboarding/upload" />;
+  }
+
+  if (!profile?.is_onboarded) {
+    return <Redirect href="/(app)/(auth)/onboarding/profile" />;
+  }
 
   return (
     <Tabs

@@ -125,6 +125,21 @@ class MealPlanService {
 
     return response.json();
   }
+
+  async hasAlreadyUploadedPDF() {
+    const headers = await this.getHeaders();
+
+    const response = await fetch(`${API_URL}/mealplans/exists`, {
+      method: "GET",
+      headers,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch uploaded PDF: ${response.statusText}`);
+    }
+
+    return response.json();
+  }
 }
 
 export const mealPlanService = new MealPlanService();

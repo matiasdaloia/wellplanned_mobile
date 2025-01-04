@@ -10,6 +10,8 @@ import { countriesList } from "@/utils/countries";
 import { ControlledSelect } from "../ui/components/select";
 import { availableLanguages } from "@/lib/auth/constants";
 import { Button } from "../ui/components/button";
+import { useQuery } from "@tanstack/react-query";
+import { mealPlanService } from "@/lib/mealplan-service";
 
 const schema = z.object({
   country: z.string({ required_error: "Country is required" }),
@@ -20,14 +22,10 @@ export type FormType = z.infer<typeof schema>;
 
 export default function ProfileForm() {
   const router = useRouter();
-  const { data: profile } = {
-    data: {
-      avatar: "https://example.com/avatar.jpg",
-      country: "United States",
-      language: "english",
-    },
-  };
-  // const updateProfileMutation = () => {};
+  const { data: profile, isLoading: isLoadingProfile } = useQuery({
+    queryKey: ["profile"],
+    queryFn: () => mealPlanService.getUserProfile(),
+  });
 
   const { handleSubmit, control } = useForm<FormType>({
     defaultValues: {
