@@ -1,33 +1,29 @@
-import { supabase } from "@/lib/supabase";
-import { decode } from "base64-arraybuffer";
 import * as DocumentPicker from "expo-document-picker";
-import * as FileSystem from "expo-file-system";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Alert } from "react-native";
 import { Button } from "../ui/components/button";
 import { useSupabase } from "@/context/supabase-provider";
-import { useMealPlanGenerator } from "@/hooks/use-meal-plan-generator";
+import { mealPlanService } from "@/lib/mealplan-service";
 
 interface Props {
   onSuccess: () => void;
 }
 
 export default function UploadPdfPicker({ onSuccess }: Props) {
-  const [uploadingDocument, setUploadingDocument] = useState(false);
-  const [pdfUri, setPdfUri] = useState<string>();
-  const { status, streamingContent, finalResult, error, generateMealPlan } =
-    useMealPlanGenerator(pdfUri);
-
-  console.log({ status, streamingContent, finalResult, error });
+  const { getAccessToken } = useSupabase();
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleFileUpload = async () => {
-    if (uploadingDocument) {
-      return;
-    }
-
-    setUploadingDocument(true);
-
+    setIsLoading(true);
     try {
+      const token = await getAccessToken();
+
+      if (!token) {
+        throw new Error("No token available");
+      }
+
+      mealPlanService.setToken(token);
+
       const { canceled, assets } = await DocumentPicker.getDocumentAsync({
         type: "application/pdf",
         copyToCacheDirectory: true,
@@ -40,7 +36,12 @@ export default function UploadPdfPicker({ onSuccess }: Props) {
       const result = assets[0];
 
       if (result.uri) {
-        setPdfUri(result.uri);
+        await mealPlanService.uploadPDF({
+          uri: result.uri,
+          type: result.mimeType || "application/pdf",
+          name: result.name,
+        });
+        onSuccess();
       }
     } catch (e) {
       if (e instanceof Error) {
@@ -55,15 +56,16 @@ export default function UploadPdfPicker({ onSuccess }: Props) {
         );
       }
     } finally {
-      setUploadingDocument(false);
+      setIsLoading(false);
     }
   };
+
   return (
     <Button
-      label={pdfUri ? "Generate meal plan" : "Upload PDF"}
-      onPress={pdfUri ? generateMealPlan : handleFileUpload}
-      disabled={uploadingDocument || status === "loading"}
-      loading={uploadingDocument || status === "loading"}
+      label="Upload PDF"
+      onPress={handleFileUpload}
+      disabled={isLoading}
+      loading={isLoading}
     />
   );
 }
