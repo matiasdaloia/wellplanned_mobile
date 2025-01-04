@@ -7,10 +7,13 @@ import { DinnerPlate } from "@/components/ui/icons/dinner-plate";
 import { ForkAndKnife } from "@/components/ui/icons/fork-and-knife";
 import { Muffin } from "@/components/ui/icons/muffin";
 import { todaySlot } from "@/lib/date/utils";
+import { mealPlanService } from "@/lib/mealplan-service";
 import { horizontalScale } from "@/lib/metrics";
+import { useQuery } from "@tanstack/react-query";
 import dayjs from "dayjs";
+import { SplashScreen } from "expo-router";
 import { Clock } from "lucide-react-native";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { View } from "react-native";
 import { ScrollView } from "react-native-gesture-handler";
 import { twMerge } from "tailwind-merge";
@@ -62,6 +65,10 @@ const slotCardConfig = {
 export default function Page() {
   // const { data: mealPlan, isLoading } = api.mealplan.findByUserId.useQuery()
   const [daySlot, setDaySlot] = useState(todaySlot);
+  const [status, setStatus] = useState("idle");
+  const [streamingContent, setStreamingContent] = useState<any>();
+  const [finalResult, setFinalResult] = useState<any>();
+  const [error, setError] = useState<string>();
 
   // if (isLoading) {
   //   return <SplashScreen />
@@ -102,6 +109,73 @@ export default function Page() {
     month: "long",
     day: "numeric",
   });
+
+  const { data: profile, isLoading: isLoadingProfile } = useQuery({
+    queryKey: ["profile"],
+    queryFn: () => mealPlanService.getUserProfile(),
+  });
+
+  const {
+    data: mealPlan,
+    isLoading: isLoadingMealPlan,
+    refetch,
+  } = useQuery({
+    queryKey: ["mealPlan"],
+    queryFn: () => mealPlanService.getCurrentUserMealPlan(),
+  });
+
+  useEffect(() => {
+    if (isLoadingProfile) {
+      SplashScreen.preventAutoHideAsync();
+    } else {
+      SplashScreen.hideAsync();
+    }
+  }, [isLoadingProfile]);
+
+  useEffect(() => {
+    if (!mealPlan?.length) {
+      mealPlanService.createSSEConnectionForMealplanGeneration().then((es) => {
+        es?.addEventListener("message", (event) => {
+          if (event.data === "" || event.data === null) return;
+
+          try {
+            const data = JSON.parse(event.data);
+
+            switch (data.type) {
+              case "update":
+                setStatus("streaming");
+                setStreamingContent(data.content);
+                break;
+
+              case "complete":
+                setStatus("complete");
+                setFinalResult(data.content);
+                es.close();
+                break;
+
+              case "error":
+                setStatus("error");
+                setError(data.content);
+                es.close();
+                break;
+            }
+          } catch (err) {
+            setStatus("error");
+            setError("Failed to parse server response");
+            es.close();
+          }
+        });
+
+        es?.addEventListener("error", (error) => {
+          setStatus("error");
+          setError("Connection failed");
+          es.close();
+        });
+      });
+    }
+  }, [mealPlan]);
+
+  console.log({ streamingContent, finalResult, error });
 
   return (
     <BaseLayout headerTitle="Weekly Menu" noPadding>

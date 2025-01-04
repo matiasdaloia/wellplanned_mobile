@@ -70,28 +70,26 @@ class MealPlanService {
     return response.json();
   }
 
-  createSSEConnectionForMealplanGeneration(
-    language: string = "en",
-    preferences?: MealPlanPreferences
-  ): EventSource {
-    const params = new URLSearchParams({
-      language,
-      ...(preferences && { preferences: JSON.stringify(preferences) }),
-    });
-
-    const eventSource = new EventSource(
-      `${API_URL}/mealplans/generate/overview?${params}`,
-      {
-        method: "POST",
-        headers: {
-          Accept: "text/event-stream",
-          "Content-Type": "multipart/form-data",
-          Authorization: `Bearer ${this.token}`,
-        },
-      }
-    );
-
-    return eventSource;
+  async createSSEConnectionForMealplanGeneration(): Promise<
+    EventSource | undefined
+  > {
+    const headers = await this.getHeaders();
+    try {
+      const eventSource = new EventSource(
+        `${API_URL}/mealplans/generate/overview`,
+        {
+          method: "POST",
+          headers: {
+            ...headers,
+            Accept: "text/event-stream",
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+      return eventSource;
+    } catch (error) {
+      console.error("Failed to create SSE connection:", error);
+    }
   }
 
   async getCurrentUserMealPlan(mealPlanId?: string) {
