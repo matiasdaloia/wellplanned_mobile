@@ -9,10 +9,13 @@ import "../global.css";
 import { SupabaseProvider } from "@/context/supabase-provider";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 export { ErrorBoundary } from "expo-router";
 
 SplashScreen.preventAutoHideAsync();
+
+const queryClient = new QueryClient();
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
@@ -46,7 +49,9 @@ function RootLayoutNav() {
     <GestureHandlerRootView style={styles.container}>
       <BottomSheetModalProvider>
         <SupabaseProvider>
-          <Slot />
+          <QueryClientProvider client={queryClient}>
+            <Slot />
+          </QueryClientProvider>
         </SupabaseProvider>
       </BottomSheetModalProvider>
     </GestureHandlerRootView>

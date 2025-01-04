@@ -1,5 +1,6 @@
 import { Platform } from "react-native";
 import EventSource from "react-native-sse";
+import { supabase } from "./supabase";
 
 const API_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
@@ -30,14 +31,22 @@ class MealPlanService {
     this.token = token;
   }
 
-  private getHeaders(): HeadersInit {
+  private async getHeaders(): Promise<HeadersInit> {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    const token = session?.access_token;
+
     return {
-      Authorization: `Bearer ${this.token}`,
+      Authorization: `Bearer ${token}`,
       Accept: "application/json",
     };
   }
 
   async uploadPDF(file: FileUpload): Promise<UploadResponse> {
+    const headers = await this.getHeaders();
+
     const formData = new FormData();
     formData.append("file", {
       uri: Platform.OS === "ios" ? file.uri.replace("file://", "") : file.uri,
@@ -48,7 +57,7 @@ class MealPlanService {
     const response = await fetch(`${API_URL}/mealplans/upload`, {
       method: "POST",
       headers: {
-        ...this.getHeaders(),
+        ...headers,
         "Content-Type": "multipart/form-data",
       },
       body: formData,
@@ -83,6 +92,40 @@ class MealPlanService {
     );
 
     return eventSource;
+  }
+
+  async getCurrentUserMealPlan(mealPlanId?: string) {
+    const headers = await this.getHeaders();
+
+    const endpoint = mealPlanId
+      ? `${API_URL}/mealplans/${mealPlanId}/with-recipes`
+      : `${API_URL}/mealplans`;
+
+    const response = await fetch(endpoint, {
+      method: "GET",
+      headers,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch meal plan: ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
+  async getUserProfile() {
+    const headers = await this.getHeaders();
+
+    const response = await fetch(`${API_URL}/profile`, {
+      method: "GET",
+      headers,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch user profile: ${response.statusText}`);
+    }
+
+    return response.json();
   }
 }
 

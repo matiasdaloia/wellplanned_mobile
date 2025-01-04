@@ -1,4 +1,7 @@
 import colors from "@/components/ui/colors";
+import { useSupabase } from "@/context/supabase-provider";
+import { mealPlanService } from "@/lib/mealplan-service";
+import { useQuery } from "@tanstack/react-query";
 import { Redirect, Tabs } from "expo-router";
 import {
   Calendar,
@@ -6,6 +9,7 @@ import {
   ShoppingBasket,
   UserCircle,
 } from "lucide-react-native";
+import { useEffect, useState } from "react";
 
 export default function Layout() {
   // const { data: profile, isLoading: isLoadingProfile } = api.auth.me.useQuery();
@@ -17,10 +21,25 @@ export default function Layout() {
   //   return <SplashScreen />;
   // }
 
-  const isLoading = false;
-  const mealPlan = undefined;
-  const refetch = () => {};
-  const error = false;
+  // const isLoading = false;
+  // const mealPlan = undefined;
+  // const refetch = () => {};
+  // const error = false;
+
+  const { data: profile, isLoading: isLoadingProfile } = useQuery({
+    queryKey: ["profile"],
+    queryFn: () => mealPlanService.getUserProfile(),
+  });
+
+  const {
+    data: mealPlan,
+    isLoading: isLoadingMealPlan,
+    refetch,
+    error,
+  } = useQuery({
+    queryKey: ["mealPlan"],
+    queryFn: () => mealPlanService.getCurrentUserMealPlan(),
+  });
 
   // // TODO: Remove mock data
   // if (mealPlan?.status === "processing") {
@@ -34,9 +53,9 @@ export default function Layout() {
   //   );
   // }
 
-  if (!mealPlan) {
-    return <Redirect href="/(app)/(auth)/onboarding/upload" />;
-  }
+  // if (!mealPlan) {
+  //   return <Redirect href="/(app)/(auth)/onboarding/upload" />;
+  // }
 
   // if (mealPlan?.status === "failed") {
   //   return (
@@ -53,6 +72,14 @@ export default function Layout() {
   // if (mealPlan?.status === "processed" && !profile?.isOnboarded) {
   //   return <Redirect href="/(auth)/onboarding/profile" />;
   // }
+
+  console.log({
+    profile,
+    mealPlan,
+    isLoadingProfile,
+    isLoadingMealPlan,
+    error,
+  });
 
   return (
     <Tabs
