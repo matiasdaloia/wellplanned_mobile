@@ -11,6 +11,8 @@ import { ControlledInput } from "../ui/components/input";
 import { ControlledSelect } from "../ui/components/select";
 import { availableLanguages } from "@/lib/auth/constants";
 import { Button } from "../ui/components/button";
+import { mealPlanService } from "@/lib/mealplan-service";
+import { useMutation, useQuery } from "@tanstack/react-query";
 
 const schema = z.object({
   firstName: z.string().optional(),
@@ -24,23 +26,20 @@ type FormType = z.infer<typeof schema>;
 export default function EditProfileForm() {
   const { user } = useSupabase();
   const router = useRouter();
-  const { data: profile } = {
-    data: {
-      avatar: "https://example.com/avatar.jpg",
-      country: "United States",
-      language: "english",
-      firstName: "John",
-      lastName: "Doe",
-    },
-  };
-  // const updateProfileMutation = api.auth.update.useMutation();
-  const [loading, setLoading] = useState(false);
+  const { data: profile } = useQuery({
+    queryKey: ["profile"],
+    queryFn: () => mealPlanService.getUserProfile(),
+  });
+  const { mutateAsync: updateProfileMutation, isPending } = useMutation({
+    mutationFn: (data: Record<string, any>) =>
+      mealPlanService.updateUserProfile(data),
+  });
 
   const { handleSubmit, control } = useForm<FormType>({
     resolver: zodResolver(schema),
     defaultValues: {
-      firstName: profile?.firstName ?? "",
-      lastName: profile?.lastName ?? "",
+      firstName: profile?.first_name ?? "",
+      lastName: profile?.last_name ?? "",
       email: user?.email ?? "",
       language: profile?.language ?? "",
     },
@@ -52,15 +51,12 @@ export default function EditProfileForm() {
     lastName,
     language,
   }: FormType) => {
-    setLoading(true);
-
     try {
-      // TODO: Add endpoint to update profile
-      // updateProfileMutation.mutateAsync({
-      //   firstName,
-      //   lastName,
-      //   language,
-      // });
+      await updateProfileMutation({
+        first_name: firstName,
+        last_name: lastName,
+        language,
+      });
 
       if (email) {
         await supabase.auth.updateUser({
@@ -74,8 +70,6 @@ export default function EditProfileForm() {
           ? error.message
           : "An error occurred, please try again."
       );
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -99,15 +93,15 @@ export default function EditProfileForm() {
       <View>
         <Button
           label="Save"
-          loading={loading}
+          loading={isPending}
           onPress={handleSubmit(onSubmit)}
-          disabled={loading}
+          disabled={isPending}
         />
         <Button
           onPress={() => router.back()}
           variant="outline"
-          disabled={loading}
-          loading={loading}
+          disabled={isPending}
+          loading={isPending}
           label="Cancel"
         />
       </View>

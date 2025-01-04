@@ -8,10 +8,15 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Text } from "@/components/ui/components/text";
 import { horizontalScale, verticalScale } from "@/lib/metrics";
 import UploadPdfPicker from "@/components/onboarding/upload-pdf-picker";
+import { useQuery } from "@tanstack/react-query";
+import { mealPlanService } from "@/lib/mealplan-service";
 
 export default function Page() {
   const router = useRouter();
-  const { data: profile } = { data: { firstName: "John" } };
+  const { data: profile } = useQuery({
+    queryKey: ["profile"],
+    queryFn: () => mealPlanService.getUserProfile(),
+  });
 
   return (
     <View className="flex-1">
@@ -23,7 +28,7 @@ export default function Page() {
           <View className="pt-8 bg-primary-main justify-end items-center rounded-bl-[81px] rounded-br-[81px]">
             <SafeAreaView>
               <Text className="text-3xl text-white font-bodyBold text-center">
-                Hello {profile?.firstName}!
+                Hello {profile?.first_name}!
               </Text>
               <Text className="text-3xl text-white font-bodyBold text-center">
                 Let's get started.

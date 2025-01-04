@@ -6,6 +6,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { twMerge } from "tailwind-merge";
 import { Text } from "../ui/components/text";
 import { Image } from "../ui/components/image";
+import { useQuery } from "@tanstack/react-query";
+import { mealPlanService } from "@/lib/mealplan-service";
 
 interface BaseLayoutProps {
   children: React.ReactNode | JSX.Element;
@@ -15,9 +17,11 @@ interface BaseLayoutProps {
 
 function Header({ headerTitle }: { headerTitle?: string }) {
   const router = useRouter();
-  const { data: profile } = {
-    data: { avatar: "https://avatars.githubusercontent.com/u/4723117?v=4" },
-  };
+  const { data: profile } = useQuery({
+    queryKey: ["profile"],
+    queryFn: () => mealPlanService.getUserProfile(),
+  });
+
   const { top } = useSafeAreaInsets();
 
   return (
@@ -28,12 +32,12 @@ function Header({ headerTitle }: { headerTitle?: string }) {
       {headerTitle && (
         <Text className="text-white font-bodyBold text-2xl">{headerTitle}</Text>
       )}
-      {profile?.avatar && (
+      {profile?.profile_image && (
         <TouchableOpacity
           onPress={() => router.push("/(app)/(protected)/profile")}
         >
           <Image
-            source={{ uri: profile?.avatar }}
+            source={{ uri: profile?.profile_image }}
             className="w-10 h-10 rounded-full"
           />
         </TouchableOpacity>

@@ -26,8 +26,6 @@ export default function UploadPdfPicker({ onSuccess }: Props) {
         throw new Error("No token available");
       }
 
-      mealPlanService.setToken(token);
-
       const { canceled, assets } = await DocumentPicker.getDocumentAsync({
         type: "application/pdf",
         copyToCacheDirectory: true,
@@ -39,13 +37,11 @@ export default function UploadPdfPicker({ onSuccess }: Props) {
 
       const result = assets[0];
 
-      if (result.uri) {
-        uploadPdfMutation.mutate({
-          uri: result.uri,
-          type: result.mimeType || "application/pdf",
-          name: result.name,
-        });
-      }
+      uploadPdfMutation.mutate({
+        uri: result.uri,
+        type: result.mimeType || "application/pdf",
+        name: result.name,
+      });
     } catch (e) {
       if (e instanceof Error) {
         Alert.alert(

@@ -32,12 +32,6 @@ export interface MealPlanPreferences {
 }
 
 class MealPlanService {
-  private token: string = "";
-
-  setToken(token: string) {
-    this.token = token;
-  }
-
   private async getHeaders(): Promise<HeadersInit> {
     const {
       data: { session },

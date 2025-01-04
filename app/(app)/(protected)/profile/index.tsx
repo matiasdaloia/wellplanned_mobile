@@ -2,6 +2,8 @@ import BaseLayout from "@/components/layouts/base";
 import { Image } from "@/components/ui/components/image";
 import { Text } from "@/components/ui/components/text";
 import { useSupabase } from "@/context/supabase-provider";
+import { mealPlanService } from "@/lib/mealplan-service";
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "expo-router";
 import { ChevronRight, LogOut, User } from "lucide-react-native";
 import React from "react";
@@ -10,13 +12,11 @@ import { TouchableOpacity } from "react-native-gesture-handler";
 
 export default function Page() {
   const { user, signOut } = useSupabase();
-  // const { data: profile } = api.auth.me.useQuery();
 
-  const profile = {
-    avatar: "https://example.com/avatar.jpg",
-    firstName: "John",
-    lastName: "Doe",
-  };
+  const { data: profile } = useQuery({
+    queryKey: ["profile"],
+    queryFn: () => mealPlanService.getUserProfile(),
+  });
 
   if (!profile || !user) {
     return null;
@@ -41,16 +41,16 @@ export default function Page() {
     <BaseLayout headerTitle="Settings">
       <View className="items-center gap-5">
         <View className="bg-slate-50 p-4 rounded-xl items-center flex-row w-full gap-3">
-          {profile.avatar && (
+          {profile.profile_image && (
             <Image
-              source={{ uri: profile.avatar }}
+              source={{ uri: profile.profile_image }}
               className="w-16 h-16 rounded-full"
-              alt={`${profile.firstName} ${profile.lastName}`}
+              alt={`${profile.first_name} ${profile.last_name}`}
             />
           )}
           <View>
             <Text className="text-lg text-primary-dark font-bodyBold">
-              {profile.firstName} {profile.lastName}
+              {profile.first_name} {profile.last_name}
             </Text>
             <Text>{user.email}</Text>
           </View>
