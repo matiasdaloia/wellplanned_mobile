@@ -2,7 +2,7 @@ import { supabase } from "@/lib/supabase";
 import { decode } from "base64-arraybuffer";
 import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Alert } from "react-native";
 import { Button } from "../ui/components/button";
 import { useSupabase } from "@/context/supabase-provider";
@@ -13,7 +13,6 @@ interface Props {
 }
 
 export default function UploadPdfPicker({ onSuccess }: Props) {
-  const { user, session } = useSupabase();
   const [uploadingDocument, setUploadingDocument] = useState(false);
   const [pdfUri, setPdfUri] = useState<string>();
   const { status, streamingContent, finalResult, error, generateMealPlan } =
@@ -29,11 +28,10 @@ export default function UploadPdfPicker({ onSuccess }: Props) {
     setUploadingDocument(true);
 
     try {
-      const { canceled, assets, output } =
-        await DocumentPicker.getDocumentAsync({
-          type: "application/pdf",
-          copyToCacheDirectory: true,
-        });
+      const { canceled, assets } = await DocumentPicker.getDocumentAsync({
+        type: "application/pdf",
+        copyToCacheDirectory: true,
+      });
 
       if (canceled) {
         throw new Error("User canceled the document picker");
