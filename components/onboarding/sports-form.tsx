@@ -8,12 +8,14 @@ import { z } from "zod";
 import { Text } from "../ui/components/text";
 import { Button } from "../ui/components/button";
 import { ControlledInput } from "../ui/components/input";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { mealPlanService } from "@/lib/mealplan-service";
 
 const schema = z.object({
   sports: z.array(z.string(), {
     required_error: "Please select at least one sport, or select 'none'",
   }),
-  sportsTimesPerWeek: z.string({
+  sports_time_per_week: z.string({
     required_error: "Please enter a number, or 0 if you do not play any sport",
   }),
   allergies: z.array(
@@ -21,7 +23,7 @@ const schema = z.object({
       required_error: "Please select at least one option, or select 'none'",
     })
   ),
-  dietRestrictions: z.array(
+  diet_restrictions: z.array(
     z.string({
       required_error: "Please select at least one option, or select 'none'",
     })
@@ -32,34 +34,32 @@ export type FormType = z.infer<typeof schema>;
 
 export default function SportsForm() {
   const router = useRouter();
-  const { data: profile } = {
-    data: {
-      avatar: "https://example.com/avatar.jpg",
-      country: "United States",
-      language: "english",
-      sports: ["Soccer", "Basketball"],
-      sportsTimesPerWeek: "3",
-      allergies: ["Peanuts", "Milk"],
-      dietRestrictions: ["Vegetarian"],
-    },
-  };
+  const { data: profile } = useQuery({
+    queryKey: ["profile"],
+    queryFn: () => mealPlanService.getUserProfile(),
+  });
+
+  const { mutateAsync: updateProfileMutation, isPending } = useMutation({
+    mutationFn: (data: Record<string, any>) =>
+      mealPlanService.updateUserProfile(data),
+  });
 
   const { handleSubmit, setValue, control } = useForm<FormType>({
     defaultValues: {
       sports: profile?.sports ?? [],
-      sportsTimesPerWeek: profile?.sportsTimesPerWeek?.toString() ?? "",
+      sports_time_per_week: profile?.sports_time_per_week?.toString() ?? "",
       allergies: profile?.allergies ?? [],
-      dietRestrictions: profile?.dietRestrictions ?? [],
+      diet_restrictions: profile?.diet_restrictions ?? [],
     },
     resolver: zodResolver(schema),
   });
 
   const onSubmit = async (values: FormType) => {
     try {
-      // await updateProfileMutation.mutateAsync({
-      //   ...values,
-      //   sportsTimesPerWeek: Number(values.sportsTimesPerWeek),
-      // });
+      await updateProfileMutation({
+        ...values,
+        sports_time_per_week: Number(values.sports_time_per_week),
+      });
     } catch (error) {
       Alert.alert(
         "Error",
@@ -112,7 +112,7 @@ export default function SportsForm() {
     ];
   }, []);
 
-  const commonDietRestrictions = useMemo(() => {
+  const commondiet_restrictions = useMemo(() => {
     return [
       { value: "Vegetarian" },
       { value: "Vegan" },
@@ -165,7 +165,7 @@ export default function SportsForm() {
       </View>
 
       <ControlledInput
-        name="sportsTimesPerWeek"
+        name="sports_time_per_week"
         control={control}
         label="How many times a week?"
       />
@@ -204,10 +204,10 @@ export default function SportsForm() {
       <View>
         <Text>Do you have any diet restriction?</Text>
         <View className="gap-2 flex-wrap flex-row">
-          {commonDietRestrictions.map((restriction) => (
+          {commondiet_restrictions.map((restriction) => (
             <Controller
               key={restriction.value}
-              name="dietRestrictions"
+              name="diet_restrictions"
               control={control}
               render={({ field }) => (
                 <Button
@@ -219,13 +219,13 @@ export default function SportsForm() {
                       : "bg-orange-300"
                   }
                   onPress={async () => {
-                    const newDietRestrictions = field.value?.includes(
+                    const newdiet_restrictions = field.value?.includes(
                       restriction.value
                     )
                       ? field.value.filter((item) => item !== restriction.value)
                       : [...(field.value ?? []), restriction.value];
 
-                    setValue("dietRestrictions", newDietRestrictions);
+                    setValue("diet_restrictions", newdiet_restrictions);
                   }}
                 />
               )}
@@ -237,16 +237,16 @@ export default function SportsForm() {
       <View>
         <Button
           onPress={handleSubmit(onSubmit)}
-          // disabled={updateProfileMutation.isPending}
+          disabled={isPending}
           label="Save"
-          // loading={updateProfileMutation.isPending}
+          loading={isPending}
         />
 
         <Button
           variant="outline"
           label="Cancel"
-          // loading={updateProfileMutation.isPending}
-          // disabled={updateProfileMutation.isPending}
+          loading={isPending}
+          disabled={isPending}
         />
       </View>
     </View>

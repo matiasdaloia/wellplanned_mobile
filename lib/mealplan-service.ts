@@ -10,6 +10,13 @@ export interface FileUpload {
   name: string;
 }
 
+export interface ProfileImageUploadResponse {
+  success: boolean;
+  image_url: string;
+  file_name: string;
+  uploaded_at: string;
+}
+
 export interface UploadResponse {
   success: boolean;
   pdf_url: string;
@@ -106,6 +113,53 @@ class MealPlanService {
 
     if (!response.ok) {
       throw new Error(`Failed to fetch meal plan: ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
+  async uploadProfileImage(
+    file: FileUpload
+  ): Promise<ProfileImageUploadResponse> {
+    const headers = await this.getHeaders();
+
+    const formData = new FormData();
+    formData.append("file", {
+      uri: Platform.OS === "ios" ? file.uri.replace("file://", "") : file.uri,
+      type: file.type,
+      name: file.name,
+    } as any);
+
+    const response = await fetch(`${API_URL}/profile/image`, {
+      method: "POST",
+      headers: {
+        ...headers,
+        "Content-Type": "multipart/form-data",
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Upload failed: ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
+  async updateUserProfile(data: Record<string, any>) {
+    const headers = await this.getHeaders();
+
+    const response = await fetch(`${API_URL}/profile`, {
+      method: "PUT",
+      headers: {
+        ...headers,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to update profile: ${response.statusText}`);
     }
 
     return response.json();

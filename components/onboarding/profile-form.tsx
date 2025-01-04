@@ -10,7 +10,7 @@ import { countriesList } from "@/utils/countries";
 import { ControlledSelect } from "../ui/components/select";
 import { availableLanguages } from "@/lib/auth/constants";
 import { Button } from "../ui/components/button";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { mealPlanService } from "@/lib/mealplan-service";
 
 const schema = z.object({
@@ -22,9 +22,14 @@ export type FormType = z.infer<typeof schema>;
 
 export default function ProfileForm() {
   const router = useRouter();
-  const { data: profile, isLoading: isLoadingProfile } = useQuery({
+  const { data: profile } = useQuery({
     queryKey: ["profile"],
     queryFn: () => mealPlanService.getUserProfile(),
+  });
+
+  const { mutateAsync: updateProfileMutation, isPending } = useMutation({
+    mutationFn: (data: Record<string, any>) =>
+      mealPlanService.updateUserProfile(data),
   });
 
   const { handleSubmit, control } = useForm<FormType>({
@@ -41,7 +46,7 @@ export default function ProfileForm() {
   );
 
   const onSubmit = async ({ country, language }: FormType) => {
-    // await updateProfileMutation.mutateAsync({ country, language });
+    await updateProfileMutation({ country, language });
     router.push("/(app)/(auth)/onboarding/sports");
   };
 
@@ -65,15 +70,15 @@ export default function ProfileForm() {
       <View>
         <Button
           label="Save"
-          // loading={updateProfileMutation.isPending}
+          loading={isPending}
           onPress={handleSubmit(onSubmit)}
-          // disabled={updateProfileMutation.isPending}
+          disabled={isPending}
         />
         <Button
           label="Cancel"
-          // loading={updateProfileMutation.isPending}
+          loading={isPending}
           variant="outline"
-          // disabled={updateProfileMutation.isPending}
+          disabled={isPending}
         />
       </View>
     </View>
