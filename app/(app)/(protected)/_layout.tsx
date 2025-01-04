@@ -1,6 +1,4 @@
-import BaseLayout from "@/components/layouts/base";
 import colors from "@/components/ui/colors";
-import LoadingState from "@/components/ui/components/loading-state";
 import { Redirect, Tabs } from "expo-router";
 import {
   Calendar,
@@ -8,7 +6,6 @@ import {
   ShoppingBasket,
   UserCircle,
 } from "lucide-react-native";
-import React from "react";
 
 export default function Layout() {
   // const { data: profile, isLoading: isLoadingProfile } = api.auth.me.useQuery();
@@ -21,24 +18,21 @@ export default function Layout() {
   // }
 
   const isLoading = false;
-  const mealPlan = {
-    groceries: [],
-    status: "processed",
-  };
+  const mealPlan = undefined;
   const refetch = () => {};
   const error = false;
 
-  // TODO: Remove mock data
-  if (mealPlan?.status === "processing") {
-    return (
-      <BaseLayout headerTitle="Weekly Menu">
-        <LoadingState
-          title="Generating your meal plan..."
-          subtitle="This may take a few seconds the first time."
-        />
-      </BaseLayout>
-    );
-  }
+  // // TODO: Remove mock data
+  // if (mealPlan?.status === "processing") {
+  //   return (
+  //     <BaseLayout headerTitle="Weekly Menu">
+  //       <LoadingState
+  //         title="Generating your meal plan..."
+  //         subtitle="This may take a few seconds the first time."
+  //       />
+  //     </BaseLayout>
+  //   );
+  // }
 
   if (!mealPlan) {
     return <Redirect href="/(app)/(auth)/onboarding/upload" />;

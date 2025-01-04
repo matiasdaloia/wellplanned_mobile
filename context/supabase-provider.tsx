@@ -12,6 +12,7 @@ type SupabaseContextProps = {
   signUp: (email: string, password: string, options: object) => Promise<void>;
   signInWithPassword: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  getAccessToken: () => Promise<string | null | undefined>;
 };
 
 type SupabaseProviderProps = {
@@ -25,6 +26,7 @@ export const SupabaseContext = createContext<SupabaseContextProps>({
   signUp: async () => {},
   signInWithPassword: async () => {},
   signOut: async () => {},
+  getAccessToken: async () => null,
 });
 
 export const useSupabase = () => useContext(SupabaseContext);
@@ -61,6 +63,21 @@ export const SupabaseProvider = ({ children }: SupabaseProviderProps) => {
     const { error } = await supabase.auth.signOut();
     if (error) {
       throw error;
+    }
+  };
+
+  const getAccessToken = async () => {
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      return session?.access_token;
+    } catch (error) {
+      console.error(
+        "Error getting access token:",
+        error instanceof Error ? error.message : error
+      );
+      return null;
     }
   };
 
@@ -107,6 +124,7 @@ export const SupabaseProvider = ({ children }: SupabaseProviderProps) => {
         signUp,
         signInWithPassword,
         signOut,
+        getAccessToken,
       }}
     >
       {children}
