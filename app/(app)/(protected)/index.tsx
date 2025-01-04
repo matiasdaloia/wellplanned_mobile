@@ -2,6 +2,7 @@ import SplashScreen from "@/components/common/splashscreen";
 import BaseLayout from "@/components/layouts/base";
 import DayButton from "@/components/menu-overview/day-button";
 import colors from "@/components/ui/colors";
+import { Button } from "@/components/ui/components/button";
 import { Text } from "@/components/ui/components/text";
 import { Coffee } from "@/components/ui/icons/coffee";
 import { DinnerPlate } from "@/components/ui/icons/dinner-plate";
@@ -17,6 +18,30 @@ import React, { useEffect, useState } from "react";
 import { View } from "react-native";
 import { ScrollView } from "react-native-gesture-handler";
 import { twMerge } from "tailwind-merge";
+
+interface Meal {
+  slot: number;
+  meal: string;
+}
+
+interface DayMealPlan {
+  weekday: number;
+  meals: Meal[];
+}
+
+interface MealPlanData {
+  results: DayMealPlan[];
+}
+
+type StreamingMessage =
+  | {
+      type: "error";
+      content: string;
+    }
+  | {
+      type: "update" | "complete";
+      content: MealPlanData;
+    };
 
 const currentWeekDays = Array.from({ length: 7 }, (_, i) => {
   const date = new Date();
@@ -65,9 +90,8 @@ const slotCardConfig = {
 export default function Page() {
   const [daySlot, setDaySlot] = useState(todaySlot);
   const [status, setStatus] = useState("idle");
-  const [streamingContent, setStreamingContent] = useState<any>();
-  const [finalResult, setFinalResult] = useState<any>();
   const [error, setError] = useState<string>();
+  const [partialResults, setPartialResults] = useState<DayMealPlan[]>();
 
   const { data: mealPlans, isLoading } = useQuery({
     queryKey: ["mealPlan"],
@@ -88,17 +112,17 @@ export default function Page() {
           if (event.data === "" || event.data === null) return;
 
           try {
-            const data = JSON.parse(event.data);
+            const data = JSON.parse(event.data) as StreamingMessage;
 
             switch (data.type) {
               case "update":
                 setStatus("streaming");
-                setStreamingContent(data.content);
+                setPartialResults(data.content.results);
                 break;
 
               case "complete":
                 setStatus("complete");
-                setFinalResult(data.content);
+                setPartialResults(data.content.results);
                 es.close();
                 break;
 
@@ -124,17 +148,22 @@ export default function Page() {
     }
   }, [mealPlans, isLoading]);
 
-  console.log({ mealPlans });
-
   if (isLoading) {
     return <SplashScreen />;
   }
 
-  const currentDayMealPlan = mealPlans?.[0].data.results.find(
-    (result) => result.weekday === daySlot
-  );
+  const currentDayMealPlan =
+    status === "streaming"
+      ? partialResults?.find(
+          (result: DayMealPlan) => result.weekday === daySlot
+        )
+      : mealPlans?.[0]?.data?.results?.find(
+          (result: DayMealPlan) => result.weekday === daySlot
+        );
 
-  const sortedMeals = currentDayMealPlan?.meals.sort((a, b) => a.slot - b.slot);
+  const sortedMeals = currentDayMealPlan?.meals?.sort(
+    (a: Meal, b: Meal) => a.slot - b.slot
+  );
 
   return (
     <BaseLayout headerTitle="Weekly Menu" noPadding>
@@ -165,7 +194,17 @@ export default function Page() {
               }}
             >
               <View className="gap-16 pb-6">
-                {sortedMeals?.map((meal, index) => {
+                {status === "error" && (
+                  <View className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
+                    <Text className="font-bodyBold">Error</Text>
+                    <Text>{error}</Text>
+                    <Button
+                      onPress={() => setStatus("idle")}
+                      label="Try again"
+                    />
+                  </View>
+                )}
+                {sortedMeals?.map((meal: Meal, index: number) => {
                   const slot = meal.slot as keyof typeof slotCardConfig;
                   const time = slotCardConfig[slot].time;
                   const title = slotCardConfig[slot].title;
