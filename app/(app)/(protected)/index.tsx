@@ -1,16 +1,17 @@
-import SplashScreen from "@/components/common/splashscreen";
-import BaseLayout from "@/components/layouts/base";
-import DayButton from "@/components/menu-overview/day-button";
-import colors from "@/components/ui/colors";
-import { Button } from "@/components/ui/components/button";
-import { Text } from "@/components/ui/components/text";
-import { Coffee } from "@/components/ui/icons/coffee";
-import { DinnerPlate } from "@/components/ui/icons/dinner-plate";
-import { ForkAndKnife } from "@/components/ui/icons/fork-and-knife";
-import { Muffin } from "@/components/ui/icons/muffin";
-import { todaySlot } from "@/lib/date/utils";
-import { mealPlanService } from "@/lib/mealplan-service";
-import { horizontalScale } from "@/lib/metrics";
+import SplashScreen from "../../../components/common/splashscreen";
+import BaseLayout from "../../../components/layouts/base";
+import DayButton from "../../../components/menu-overview/day-button";
+import MealPlanPreview from "../../../components/menu-overview/meal-plan-preview";
+import colors from "../../../components/ui/colors";
+import { Button } from "../../../components/ui/components/button";
+import { Text } from "../../../components/ui/components/text";
+import { Coffee } from "../../../components/ui/icons/coffee";
+import { DinnerPlate } from "../../../components/ui/icons/dinner-plate";
+import { ForkAndKnife } from "../../../components/ui/icons/fork-and-knife";
+import { Muffin } from "../../../components/ui/icons/muffin";
+import { todaySlot } from "../../../lib/date/utils";
+import { mealPlanService } from "../../../lib/mealplan-service";
+import { horizontalScale } from "../../../lib/metrics";
 import { useQuery } from "@tanstack/react-query";
 import dayjs from "dayjs";
 import { Clock } from "lucide-react-native";
@@ -19,12 +20,12 @@ import { View } from "react-native";
 import { ScrollView } from "react-native-gesture-handler";
 import { twMerge } from "tailwind-merge";
 
-interface Meal {
+export interface Meal {
   slot: number;
   meal: string;
 }
 
-interface DayMealPlan {
+export interface DayMealPlan {
   weekday: number;
   meals: Meal[];
 }
@@ -92,6 +93,7 @@ export default function Page() {
   const [status, setStatus] = useState("idle");
   const [error, setError] = useState<string>();
   const [partialResults, setPartialResults] = useState<DayMealPlan[]>();
+  const [finalResults, setFinalResults] = useState<DayMealPlan[]>();
 
   const { data: mealPlans, isLoading } = useQuery({
     queryKey: ["mealPlan"],
@@ -122,7 +124,7 @@ export default function Page() {
 
               case "complete":
                 setStatus("complete");
-                setPartialResults(data.content.results);
+                setFinalResults(data.content.results);
                 es.close();
                 break;
 
@@ -148,15 +150,17 @@ export default function Page() {
     }
   }, [mealPlans, isLoading]);
 
-  if (isLoading) {
+  if (isLoading || (status === "idle" && !mealPlans?.length)) {
     return <SplashScreen />;
   }
 
+  if (status === "streaming") {
+    return <MealPlanPreview partialResults={partialResults} />;
+  }
+
   const currentDayMealPlan =
-    status === "streaming"
-      ? partialResults?.find(
-          (result: DayMealPlan) => result.weekday === daySlot
-        )
+    status === "complete"
+      ? finalResults?.find((result: DayMealPlan) => result.weekday === daySlot)
       : mealPlans?.[0]?.data?.results?.find(
           (result: DayMealPlan) => result.weekday === daySlot
         );
