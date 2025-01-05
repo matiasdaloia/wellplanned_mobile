@@ -22,7 +22,7 @@ export default function MealRecommendationCard({ recommendation }: Props) {
     router.push({
       pathname: `/recommendations/${recommendation.id}`,
       params: {
-        imageUrl: recommendation.recipeThumbnail,
+        imageUrl: recommendation.recipe_thumbnail,
       },
     });
   };
@@ -31,7 +31,7 @@ export default function MealRecommendationCard({ recommendation }: Props) {
     <TouchableWithoutFeedback onPress={handlePress}>
       <View>
         <ImageBackground
-          source={{ uri: recommendation.recipeThumbnail }}
+          source={{ uri: recommendation.recipe_thumbnail }}
           style={{
             width: Dimensions.get("window").width * 0.8 - horizontalScale(32),
             aspectRatio: 1,
@@ -53,7 +53,7 @@ export default function MealRecommendationCard({ recommendation }: Props) {
           >
             <View className="p-6 gap-2">
               <Text className="text-white text-xl font-bodyBold">
-                {recommendation.recipeTitle}
+                {recommendation.recipe_title}
               </Text>
             </View>
           </LinearGradient>
