@@ -6,7 +6,7 @@ import { Text } from "../ui/components/text";
 
 interface DayButtonProps {
   date: Date;
-  setDaySlot: React.Dispatch<React.SetStateAction<number>>;
+  setDaySlot: (daySlot: number) => void;
   daySlot: number;
 }
 

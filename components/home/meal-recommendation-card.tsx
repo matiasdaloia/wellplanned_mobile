@@ -20,6 +20,7 @@ export default function MealRecommendationCard({ recommendation }: Props) {
 
   const handlePress = () => {
     router.push({
+      // @ts-expect-error
       pathname: `/recommendations/${recommendation.id}`,
       params: {
         imageUrl: recommendation.recipe_thumbnail,

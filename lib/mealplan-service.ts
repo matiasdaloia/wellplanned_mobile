@@ -1,6 +1,7 @@
 import { Platform } from "react-native";
 import EventSource from "react-native-sse";
 import { supabase } from "./supabase";
+import { useAppStore } from "./store";
 
 const API_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
@@ -121,10 +122,11 @@ class MealPlanService {
     return response.json();
   }
 
-  async getMealPlanRecommendations(mealPlanId: string) {
+  async getMealPlanRecommendations(mealPlanId: string, weekDay: number) {
     const headers = await this.getHeaders();
+
     const response = await fetch(
-      `${API_URL}/mealplans/${mealPlanId}/recommendations`,
+      `${API_URL}/mealplans/${mealPlanId}/recommendations?weekday=${weekDay}`,
       {
         method: "GET",
         headers,
@@ -143,13 +145,14 @@ class MealPlanService {
     return response.json();
   }
 
-  async createSSEConnectionForRecommendations(): Promise<
-    EventSource | undefined
-  > {
+  async createSSEConnectionForRecommendations(
+    weekDay: number
+  ): Promise<EventSource | undefined> {
     const headers = await this.getSSEHeaders();
+
     try {
       const eventSource = new EventSource(
-        `${API_URL}/mealplans/generate/recommendations`,
+        `${API_URL}/mealplans/generate/recommendations?weekday=${weekDay}`,
         {
           method: "POST",
           headers,

@@ -6,12 +6,12 @@ import LoadingState from "@/components/ui/components/loading-state";
 import { Text } from "@/components/ui/components/text";
 import { slotNamesMap } from "@/lib/constants";
 import { mealPlanService } from "@/lib/mealplan-service";
+import { useAppStore } from "@/lib/store";
 import { useQuery } from "@tanstack/react-query";
 import _ from "lodash";
 import React, { useEffect, useState } from "react";
 import { View } from "react-native";
 import { ScrollView } from "react-native-gesture-handler";
-import EventSource from "react-native-sse";
 
 type StreamingMessage =
   | {
@@ -24,6 +24,7 @@ type StreamingMessage =
     };
 
 export default function Page() {
+  const selectedWeekDay = useAppStore((state) => state.selectedWeekDay);
   const [status, setStatus] = useState<
     "idle" | "streaming" | "complete" | "error"
   >("idle");
@@ -39,9 +40,12 @@ export default function Page() {
   // Then check for existing recommendations
   const { data: existingRecommendations, isLoading: isLoadingRecommendations } =
     useQuery({
-      queryKey: ["recommendations", mealPlans?.[0]?.id],
+      queryKey: ["recommendations", mealPlans?.[0]?.id, selectedWeekDay],
       queryFn: () =>
-        mealPlanService.getMealPlanRecommendations(mealPlans[0].id),
+        mealPlanService.getMealPlanRecommendations(
+          mealPlans[0].id,
+          selectedWeekDay
+        ),
       enabled: !!mealPlans?.[0]?.id,
     });
 
@@ -54,8 +58,9 @@ export default function Page() {
 
     if (!isLoadingMealPlan && !isLoadingRecommendations && mealPlans?.[0]?.id) {
       const generateRecommendations = async () => {
-        const es =
-          await mealPlanService.createSSEConnectionForRecommendations();
+        const es = await mealPlanService.createSSEConnectionForRecommendations(
+          selectedWeekDay
+        );
 
         if (!es) {
           setStatus("error");

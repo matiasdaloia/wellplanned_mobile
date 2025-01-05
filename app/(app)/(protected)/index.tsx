@@ -1,3 +1,4 @@
+import { useAppStore } from "@/lib/store";
 import SplashScreen from "../../../components/common/splashscreen";
 import BaseLayout from "../../../components/layouts/base";
 import DayButton from "../../../components/menu-overview/day-button";
@@ -9,7 +10,6 @@ import { Coffee } from "../../../components/ui/icons/coffee";
 import { DinnerPlate } from "../../../components/ui/icons/dinner-plate";
 import { ForkAndKnife } from "../../../components/ui/icons/fork-and-knife";
 import { Muffin } from "../../../components/ui/icons/muffin";
-import { todaySlot } from "../../../lib/date/utils";
 import { mealPlanService } from "../../../lib/mealplan-service";
 import { horizontalScale } from "../../../lib/metrics";
 import { useQuery } from "@tanstack/react-query";
@@ -89,7 +89,8 @@ const slotCardConfig = {
 };
 
 export default function Page() {
-  const [daySlot, setDaySlot] = useState(todaySlot);
+  const selectedWeekDay = useAppStore((state) => state.selectedWeekDay);
+  const setSelectedWeekDay = useAppStore((state) => state.setSelectedWeekDay);
   const [status, setStatus] = useState("idle");
   const [error, setError] = useState<string>();
   const [partialResults, setPartialResults] = useState<DayMealPlan[]>();
@@ -100,7 +101,9 @@ export default function Page() {
     queryFn: () => mealPlanService.getCurrentUserMealPlan(),
   });
 
-  const selectedDay = currentWeekDays.find((date) => date.getDay() === daySlot);
+  const selectedDay = currentWeekDays.find(
+    (date) => date.getDay() === selectedWeekDay
+  );
   const selectedDayFormatted = selectedDay?.toLocaleDateString(undefined, {
     weekday: "long",
     month: "long",
@@ -160,9 +163,11 @@ export default function Page() {
 
   const currentDayMealPlan =
     status === "complete"
-      ? finalResults?.find((result: DayMealPlan) => result.weekday === daySlot)
+      ? finalResults?.find(
+          (result: DayMealPlan) => result.weekday === selectedWeekDay
+        )
       : mealPlans?.[0]?.data?.results?.find(
-          (result: DayMealPlan) => result.weekday === daySlot
+          (result: DayMealPlan) => result.weekday === selectedWeekDay
         );
 
   const sortedMeals = currentDayMealPlan?.meals?.sort(
@@ -179,8 +184,8 @@ export default function Page() {
                 <DayButton
                   key={date.toISOString()}
                   date={date}
-                  daySlot={daySlot}
-                  setDaySlot={setDaySlot}
+                  daySlot={selectedWeekDay}
+                  setDaySlot={setSelectedWeekDay}
                 />
               ))}
             </View>
