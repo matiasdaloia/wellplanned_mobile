@@ -240,6 +240,45 @@ class MealPlanService {
 
     return response.json();
   }
+
+  async getMealPlanRecommendation(recommendationId: string) {
+    const headers = await this.getHeaders();
+
+    const response = await fetch(
+      `${API_URL}/recommendations/${recommendationId}`,
+      {
+        method: "GET",
+        headers,
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        `Failed to fetch recommendations: ${response.statusText}`
+      );
+    }
+
+    return response.json();
+  }
+
+  async createSSEConnectionForRecipeBreakdown(
+    recommendationId: string
+  ): Promise<EventSource | undefined> {
+    const headers = await this.getSSEHeaders();
+
+    try {
+      const eventSource = new EventSource(
+        `${API_URL}/recommendations/${recommendationId}/breakdown`,
+        {
+          method: "POST",
+          headers,
+        }
+      );
+      return eventSource;
+    } catch (error) {
+      console.error("Failed to create SSE connection:", error);
+    }
+  }
 }
 
 export const mealPlanService = new MealPlanService();
