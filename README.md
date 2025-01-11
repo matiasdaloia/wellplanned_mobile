@@ -28,7 +28,7 @@ To run the Wellplanned mobile app locally, follow these steps:
 3. **Set up environment variables:**
    Create a `.env` file in the root directory and add the following environment variables:
    ```sh
-   EXPO_PUBLIC_API_URL=https://gvilgnuyekkglgjmzbtr.supabase.co
+   EXPO_PUBLIC_API_URL=https://your_supabase_url
    EXPO_PUBLIC_API_KEY=your_supabase_api_key
    EXPO_PUBLIC_API_BASE_URL=http://localhost:8000
    ```
@@ -37,6 +37,8 @@ To run the Wellplanned mobile app locally, follow these steps:
    ```sh
    npm start
    ```
+
+Note: For this to work, you need to have `wellplanned_api` running locally.
 
 ## Overview of the App
 
